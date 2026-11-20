@@ -1,0 +1,137 @@
+const $=s=>document.querySelector(s);const main=$('#main');const KEY='papertopia.lite.projects.v1',BRAND='papertopia.lite.brand.v1';
+const categories=['Coloring Book','Activity Workbook','Educational Worksheet','Tracing & Handwriting','Flashcard & Learning Cards','Busy Book & Montessori','Maze & Logic Puzzle','Puzzle & Cut-Paste','Storybook','Comic Book','Encyclopedia','E-book & Guidebook','Educational Games','Journal','Educational Poster','Infographic','Teaching Module','Activity Pack','Custom Product'];
+const styles=['Cute Kawaii','3D Clay','Storybook','Montessori','Watercolor','Stickman','Minimalist','Custom'];const defaults={brandName:'RiriSaktaEdu',tagline:'A World of Creative Learning!',creator:'RiriSaktaEdu',copyright:'© 2026 RiriSaktaEdu'};
+let projects=load(KEY,[]),brand=load(BRAND,defaults),activeId=null,selectedPage=0,view='dashboard',customReferenceData='';function load(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}function save(){localStorage.setItem(KEY,JSON.stringify(projects));localStorage.setItem(BRAND,JSON.stringify(brand))}function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function id(){return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}function active(){return projects.find(p=>p.id===activeId)}function go(v){view=v;document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));render()}
+function render(){if(view==='dashboard')dashboard();if(view==='create')createForm();if(view==='projects')projectList();if(view==='editor')editor();if(view==='brand')brandForm();if(view==='help')help()}
+function title(eyebrow,h,p,action=''){return `<div class="heading"><div><div class="eyebrow">${eyebrow}</div><h1>${h}</h1><p>${p}</p></div>${action}</div>`}
+function dashboard(){main.innerHTML=title('PRINTABLE CREATOR WORKSPACE','Selamat datang di PAPERTOPIA!','Ubah ide kreatif menjadi produk belajar yang bisa diedit, dicetak, dan dikembangkan.',`<button class="btn primary" onclick="go('create')">＋ Buat Produk Baru</button>`)+`<div class="cards"><div class="card"><div class="muted">Total Proyek</div><div class="stat">${projects.length}</div></div><div class="card"><div class="muted">Total Halaman</div><div class="stat">${projects.reduce((n,p)=>n+(p.pages?.length||0),0)}</div></div><div class="card"><div class="muted">Mode</div><div class="stat" style="font-size:22px">Offline-first</div></div></div><div class="section"><h2>Mulai membuat</h2><div class="cards"><div class="card quick"><div class="symbol">📚</div><div><b>Workbook & Worksheet</b><div class="muted">Aktivitas belajar terstruktur</div></div></div><div class="card quick"><div class="symbol">🎨</div><div><b>Coloring & Activity</b><div class="muted">Halaman kreatif dan latihan</div></div></div><div class="card quick"><div class="symbol">🃏</div><div><b>Flashcard & Learning</b><div class="muted">Kartu belajar dan visual</div></div></div></div></div><div class="section"><h2>Proyek terbaru</h2>${projects.length?`<div class="project-list">${projects.slice(0,4).map(projectRow).join('')}</div>`:`<div class="panel empty"><b>Belum ada proyek</b>Buat produk pertamamu untuk memulai.</div>`}</div>`}
+function projectRow(p){return `<div class="project"><div><h3>${esc(p.name)}</h3><p>${esc(p.category)} · ${esc(p.topic)} · ${p.pages.length} halaman</p></div><div class="actions"><button class="btn" onclick="openProject('${p.id}')">Buka</button><button class="btn danger" onclick="removeProject('${p.id}')">Hapus</button></div></div>`}
+function createForm(){main.innerHTML=title('PRODUCT BUILDER','Buat produk baru','Tentukan detail dasar. PAPERTOPIA akan menyusun draft halaman offline.')+`<div class="panel"><div class="form-grid"><div class="field"><label>Nama produk</label><input id="pname" placeholder="Contoh: Petualangan Mengenal Hewan"></div><div class="field"><label>Kategori produk</label><select id="cat" onchange="toggleCustomFields()">${categories.map(x=>`<option>${x}</option>`).join('')}</select></div><div class="field"><label>Topik / tema</label><input id="topic" placeholder="Contoh: Hewan darat dan air"></div><div class="field"><label>Target usia / kelas</label><select id="age"><option>3–5 tahun</option><option>5–6 tahun</option><option>7–8 tahun</option><option>9–10 tahun</option><option>11–12 tahun</option><option>Remaja</option><option>Dewasa</option></select></div><div class="field"><label>Bahasa</label><select id="lang"><option>Bahasa Indonesia</option><option>English</option><option>Bilingual</option></select></div><div class="field"><label>Jumlah halaman</label><input id="count" type="number" min="1" max="60" value="8"></div><div class="field"><label>Tingkat kesulitan</label><select id="difficulty"><option>Mudah</option><option>Menengah</option><option>Menantang</option></select></div><div class="field"><label>Gaya visual</label><select id="style">${styles.map(x=>`<option>${x}</option>`).join('')}</select></div><div class="field"><label>Ukuran kertas</label><select id="paper"><option>A4</option><option>A5</option><option>Letter</option></select></div><div class="field"><label>Orientasi</label><select id="orientation"><option>Portrait</option><option>Landscape</option></select></div><div class="field full"><label>Tujuan pembelajaran / catatan</label><textarea id="goal" placeholder="Apa yang diharapkan dipelajari pengguna?"></textarea></div></div>
+<div id="customFields" class="custom-studio" style="display:none">
+ <div class="eyebrow">CUSTOM PRODUCT STUDIO</div><h3>Buat produk dengan referensimu sendiri</h3>
+ <p class="muted">Bagian ini muncul khusus untuk kategori Custom Product.</p>
+ <div class="field"><label>Nama / jenis produk custom</label><input id="customType" placeholder="Contoh: Coloring Book karakter buatan saya"></div>
+ <div class="field"><label>Upload template contoh (PNG/JPG/WebP)</label><input id="customReference" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadCustomReference(this.files[0])"></div>
+ <div id="customReferencePreview"></div>
+ <div class="field"><label>Apa yang ingin diikuti?</label><select id="referenceMode"><option value="style">Gaya visual saja</option><option value="layout">Tata letak saja</option><option value="both">Gaya visual dan tata letak</option><option value="character">Karakter / objek utama</option></select></div>
+ <div class="field"><label>Catatan desain</label><textarea id="customNotes" placeholder="Contoh: pertahankan garis tebal, karakter lucu, ruang mewarnai luas, tanpa arsiran..."></textarea></div>
+ <div class="notice">Referensi dan catatan disimpan bersama proyek. Analisis otomatis dan generate gambar AI akan aktif setelah backend model gambar dihubungkan.</div>
+</div>
+<div class="actions"><button class="btn primary" onclick="createProject()">Buat draft produk</button><button class="btn" onclick="go('dashboard')">Batal</button></div><div class="notice">Mesin konten menggunakan template lokal, bukan AI. Tinjau fakta dan instruksi sebelum produk digunakan atau dijual.</div></div>`}
+function toggleCustomFields(){const el=$('#customFields');if(el)el.style.display=$('#cat').value==='Custom Product'?'grid':'none'}
+function loadCustomReference(file){
+ if(!file)return;
+ if(file.size>1500000){alert('Ukuran referensi maksimal 1,5 MB.');return}
+ const reader=new FileReader();reader.onload=()=>{customReferenceData=reader.result;const box=$('#customReferencePreview');if(box)box.innerHTML=`<img class="custom-ref-thumb" src="${customReferenceData}" alt="Template referensi"><p class="muted">Referensi siap disimpan ke proyek.</p>`};reader.readAsDataURL(file)
+}
+function createProject(){const name=$('#pname').value.trim(),topic=$('#topic').value.trim();if(!name||!topic){alert('Isi nama produk dan topik terlebih dahulu.');return}let n=Math.max(1,Math.min(60,Number($('#count').value)||8));let p={id:id(),name,category:$('#cat').value,topic,age:$('#age').value,language:$('#lang').value,count:n,difficulty:$('#difficulty').value,style:$('#style').value,paper:$('#paper').value,orientation:$('#orientation').value,goal:$('#goal').value,customType:$('#customType')?.value||'',customNotes:$('#customNotes')?.value||'',referenceMode:$('#referenceMode')?.value||'style',referenceImage:$('#cat').value==='Custom Product'?customReferenceData:'',created:new Date().toISOString(),pages:[]};p.pages=makePages(p);projects.unshift(p);activeId=p.id;selectedPage=0;customReferenceData='';save();go('editor')}
+function makePages(p){let patterns={ 'Coloring Book':['Cover','Petunjuk mewarnai','Kenali bentuk','Halaman mewarnai','Kreasi bebas','Galeri karya','Sertifikat'], 'Activity Workbook':['Cover','Tujuan belajar','Ayo amati','Latihan terbimbing','Latihan mandiri','Tantangan','Refleksi'], 'Educational Worksheet':['Cover','Petunjuk','Amati dan temukan','Cocokkan jawaban','Latihan','Tantangan','Evaluasi'], 'Flashcard & Learning Cards':['Cover','Kartu pengenalan','Kartu pasangan','Kartu latihan','Kuis kartu','Panduan penggunaan']};let pattern=patterns[p.category]||['Cover','Pengenalan topik','Ayo amati','Aktivitas 1','Aktivitas 2','Latihan mandiri','Tantangan','Refleksi'];return Array.from({length:p.count},(_,i)=>{let label=i===0?'Cover':pattern[i%pattern.length];return {title:i===0?p.name:`${label} — ${p.topic}`,objective:i===0?`Produk belajar tentang ${p.topic}.`:`Mengenal dan mengeksplorasi ${p.topic} sesuai usia ${p.age}.`,instructions:i===0?`Dibuat untuk ${p.age}. Gaya visual ${p.style}.`:`Amati materi tentang ${p.topic}, lalu kerjakan aktivitas sesuai petunjuk.`,body:i===0?`${brand.brandName} · ${brand.tagline}`:`Topik: ${p.topic}\nTujuan: ${p.goal||'Mengenal konsep utama secara bertahap.'}\nTingkat: ${p.difficulty}`,visual:`Ilustrasi ${p.topic}, gaya ${p.style}, sesuai usia ${p.age}.`,image:'',number:i+1}})}
+function openProject(pid){activeId=pid;selectedPage=0;go('editor')}function removeProject(pid){if(!confirm('Hapus proyek ini dari perangkat?'))return;projects=projects.filter(p=>p.id!==pid);save();render()}
+function editor(){let p=active();if(!p){go('projects');return}let pg=p.pages[selectedPage];main.innerHTML=title('PRODUCT WORKSPACE',esc(p.name),`${esc(p.category)} · ${esc(p.age)} · ${p.pages.length} halaman`,`<button class="btn" onclick="go('projects')">← Proyek</button>`)+`<div class="actions no-print" style="margin:0 0 14px"><button class="btn primary" onclick="previewProject()">Preview & Cetak PDF</button><button class="btn" onclick="addPage()">＋ Tambah halaman</button><button class="btn" onclick="downloadProject()">Download JSON</button></div><div class="editor-grid"><div><div class="page-list">${p.pages.map((x,i)=>`<div class="page-item ${i===selectedPage?'selected':''}"><div class="page-top"><strong>Halaman ${i+1}: ${esc(x.title)}</strong><button class="btn" onclick="selectPage(${i})">Edit</button></div><div class="mini">${esc(x.objective)}</div>${i===selectedPage?`<input aria-label="Judul halaman" value="${esc(x.title)}" onchange="editPage(${i},'title',this.value)"><textarea aria-label="Instruksi" onchange="editPage(${i},'instructions',this.value)">${esc(x.instructions)}</textarea><textarea aria-label="Isi halaman" onchange="editPage(${i},'body',this.value)">${esc(x.body)}</textarea><textarea aria-label="Arahan ilustrasi" onchange="editPage(${i},'visual',this.value)">${esc(x.visual)}</textarea><div class="builtin-library"><div class="eyebrow">ILUSTRASI OFFLINE</div><b>Pilih gambar bawaan PAPERTOPIA</b><p class="muted">Gambar SVG siap pakai, tersimpan bersama aplikasi. Tidak perlu API atau internet setelah halaman terbuka.</p><div class="builtin-grid">${builtInIllustrations.map(a=>`<button type="button" class="builtin-choice" onclick="chooseBuiltInIllustration(${i},'${a.id}')"><img src="assets/illustrations/${a.id}.svg" alt=""><span>${a.name}</span></button>`).join('')}</div></div><label class="field"><label>Atau upload ilustrasi sendiri</label><input type="file" accept="image/*" onchange="uploadPageImage(${i},this.files[0])"></label>${x.image?`<img class="asset-thumb" src="${x.image}">`:''}<div class="image-studio"><div class="eyebrow">AI IMAGE STUDIO</div><h3>Ilustrasi untuk halaman ini</h3><p class="muted">Untuk gambar unik, prompt dibuat dari kategori, topik, usia, gaya visual, dan isi halaman. Generator eksternal tetap memerlukan proses salin-tempel dan upload manual.</p><textarea id="imagePrompt${i}" readonly>${esc(imagePrompt(p,x))}</textarea><div class="actions"><button class="btn primary" onclick="generatePageImage(${i},this)">✦ START GENERATE</button><button class="btn" onclick="copyImagePrompt(${i})">Salin prompt (opsional)</button></div><div class="notice">START GENERATE mengirim instruksi ke backend PAPERTOPIA. Hasil gambar akan langsung masuk ke halaman ini jika API key sudah dipasang di Cloudflare Worker.</div><div class="generation-status" id="generationStatus${i}" aria-live="polite"></div></div><div class="actions"><button class="btn" onclick="movePage(${i},-1)">↑</button><button class="btn" onclick="movePage(${i},1)">↓</button><button class="btn danger" onclick="deletePage(${i})">Hapus</button></div>`:''}</div>`).join('')}</div></div><div><div class="panel"><b>Informasi produk</b><p class="muted">${esc(p.topic)}<br>${esc(p.difficulty)} · ${esc(p.paper)} ${esc(p.orientation)}</p><div class="notice">Draft dibuat offline. Pastikan konten sesuai usia, akurat, dan aman sebelum dibagikan.</div><button class="btn primary" style="width:100%" onclick="previewProject()">Lihat preview</button></div></div></div>`}
+function selectPage(i){selectedPage=i;editor()}function editPage(i,k,v){let p=active();p.pages[i][k]=v;save();}function movePage(i,d){let p=active(),j=i+d;if(j<0||j>=p.pages.length)return;[p.pages[i],p.pages[j]]=[p.pages[j],p.pages[i]];selectedPage=j;p.pages.forEach((x,k)=>x.number=k+1);save();editor()}function addPage(){let p=active();p.pages.push({title:'Halaman baru',objective:'Tujuan halaman',instructions:'Tulis instruksi aktivitas.',body:'',visual:'',image:'',number:p.pages.length+1});selectedPage=p.pages.length-1;save();editor()}function deletePage(i){let p=active();if(p.pages.length<2){alert('Minimal satu halaman harus tersedia.');return}if(!confirm('Hapus halaman ini?'))return;p.pages.splice(i,1);p.pages.forEach((x,k)=>x.number=k+1);selectedPage=Math.max(0,i-1);save();editor()}
+function uploadPageImage(i,file){if(!file)return;if(file.size>2*1024*1024){alert('Pilih gambar maksimal 2 MB agar penyimpanan browser tidak cepat penuh.');return}let r=new FileReader();r.onload=()=>{active().pages[i].image=r.result;save();editor()};r.readAsDataURL(file)}
+
+
+const builtInIllustrations = [
+  {id:'cat',name:'Kucing',group:'Hewan'},{id:'dog',name:'Anjing',group:'Hewan'},
+  {id:'elephant',name:'Gajah',group:'Hewan'},{id:'butterfly',name:'Kupu-kupu',group:'Hewan'},
+  {id:'fish',name:'Ikan',group:'Hewan'},{id:'apple',name:'Apel',group:'Buah'},
+  {id:'banana',name:'Pisang',group:'Buah'},{id:'sun',name:'Matahari',group:'Alam'},
+  {id:'cloud-rain',name:'Awan hujan',group:'Alam'},{id:'rainbow',name:'Pelangi',group:'Alam'},
+  {id:'flower',name:'Bunga',group:'Tumbuhan'},{id:'tree',name:'Pohon',group:'Tumbuhan'},
+  {id:'car',name:'Mobil',group:'Transportasi'},{id:'bus',name:'Bus',group:'Transportasi'},
+  {id:'rocket',name:'Roket',group:'Transportasi'},{id:'house',name:'Rumah',group:'Benda & Bentuk'},
+  {id:'shapes',name:'Bentuk geometri',group:'Benda & Bentuk'}
+];
+function chooseBuiltInIllustration(i,id){
+ const p=active(),x=p?.pages[i]; if(!x)return;
+ const item=builtInIllustrations.find(a=>a.id===id); if(!item)return;
+ x.image=`assets/illustrations/${item.id}.svg`;
+ x.visual=`Ilustrasi bawaan: ${item.name}.`;
+ save(); editor();
+}
+
+function imagePrompt(p,x){
+ const cat=p.category||'',topic=p.topic||'',age=p.age||'anak-anak',style=p.style||'Cute Kawaii';
+ const isColor=/coloring/i.test(cat),isCard=/flashcard|learning cards/i.test(cat),isStory=/storybook|comic/i.test(cat),isWorksheet=/worksheet|workbook|activity|busy book|montessori|maze|puzzle|tracing/i.test(cat);
+ let purpose=isColor?'Create a printable coloring-book illustration in pure black-and-white line art. Use bold, smooth, closed outlines, large easy-to-color areas, white background, no gray shading, no color, no hatching.':isCard?'Create a clear educational flashcard illustration. Show one main recognizable subject, centered, with a clean uncluttered background and generous whitespace.':isStory?'Create a warm, expressive full-color storybook illustration with clear characters, readable action, and a cohesive scene.':isWorksheet?'Create a child-friendly educational worksheet illustration with a clear visual task area, simple objects, generous whitespace, and uncluttered composition.':'Create a polished educational printable illustration with a clear focal subject and generous whitespace.';
+ return `Create ONE finished illustration asset for a printable ${cat} page.
+Page title: ${x.title||''}
+Topic: ${topic}
+Page objective: ${x.objective||''}
+Activity instructions: ${x.instructions||''}
+Visual direction: ${x.visual||''}
+Target age: ${age}
+Art style: ${style}.
+${purpose}
+Composition: portrait A4 printable page, centered subject, safe margins, high contrast, crisp clean edges, print-friendly high resolution. Make the image age-appropriate for ${age}. Keep the illustration consistent with the same visual style across all pages. Do not add logos, watermarks, page numbers, fake text, signatures, UI, or mockup scenes. If words are essential, leave clean blank spaces for text to be added in the editor; do not generate gibberish lettering.`;
+}
+
+function dataUrlParts(dataUrl){
+ const m=String(dataUrl||'').match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/);
+ return m?{mime_type:m[1],data:m[2]}:null;
+}
+async function generatePageImage(i,button){
+ const p=active(),x=p?.pages[i]; if(!p||!x)return;
+ const status=$('#generationStatus'+i);
+ const prompt=imagePrompt(p,x);
+ const ref=p.category==='Custom Product'&&p.referenceImage?dataUrlParts(p.referenceImage):null;
+ if(p.category==='Custom Product'&&p.referenceImage&&!ref){
+   if(status)status.textContent='Format referensi tidak didukung. Gunakan PNG, JPG, atau WebP.';
+   return;
+ }
+ if(button){button.disabled=true;button.textContent='Membuat gambar…'}
+ if(status)status.textContent='Menghubungi mesin gambar AI. Proses dapat memerlukan waktu.';
+ try{
+   const response=await fetch('/api/generate',{
+     method:'POST',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({
+       prompt,
+       reference_image:ref,
+       reference_mode:p.referenceMode||'style',
+       custom_notes:p.customNotes||'',
+       category:p.category,
+       page_number:i+1
+     })
+   });
+   const payload=await response.json().catch(()=>({error:'Respons server tidak valid.'}));
+   if(!response.ok)throw new Error(payload.error||`Server error (${response.status})`);
+   if(!payload.image?.data||!payload.image?.mime_type)throw new Error('Backend tidak mengembalikan gambar.');
+   x.image=`data:${payload.image.mime_type};base64,${payload.image.data}`;
+   x.visual=(x.visual||'')+' · AI generated';
+   save(); editor();
+   const newStatus=$('#generationStatus'+i);
+   if(newStatus)newStatus.textContent='Gambar berhasil dibuat dan dimasukkan ke halaman.';
+ }catch(err){
+   if(status)status.textContent=err.message||'Gagal membuat gambar. Periksa konfigurasi backend.';
+   if(button){button.disabled=false;button.textContent='✦ START GENERATE'}
+ }
+}
+
+function copyImagePrompt(i){
+ const p=active(),x=p?.pages[i];if(!x)return;
+ const value=imagePrompt(p,x),field=document.getElementById('imagePrompt'+i);
+ if(field){field.value=value;field.focus();field.select();}
+ if(navigator.clipboard?.writeText){navigator.clipboard.writeText(value).then(()=>alert('Prompt berhasil disalin. Buka ChatGPT atau Gemini untuk membuat gambarnya.')).catch(()=>alert('Prompt sudah ditampilkan dan dipilih. Tekan Salin dari menu HP.'));}
+ else alert('Prompt sudah dipilih. Tekan Salin dari menu HP.');
+}
+function openImageGenerator(i,provider){
+ const p=active(),x=p?.pages[i];if(!x)return;
+ const value=imagePrompt(p,x),field=document.getElementById('imagePrompt'+i);
+ if(field){field.value=value;}
+ const url=provider==='gemini'?'https://gemini.google.com/app':'https://chatgpt.com/';
+ const win=window.open(url,'_blank','noopener');
+ if(navigator.clipboard?.writeText){navigator.clipboard.writeText(value).then(()=>alert(`Prompt disalin. ${provider==='gemini'?'Gemini':'ChatGPT'} sudah dibuka di tab baru. Tempel prompt pada kolom chat lalu buat gambar.`)).catch(()=>alert('Generator dibuka. Salin prompt dari kotak AI Image Studio.'));}
+ else alert('Generator dibuka. Salin prompt dari kotak AI Image Studio.');
+ if(!win)alert('Browser memblokir tab baru. Izinkan pop-up atau buka tombol generator sekali lagi.');
+}
+
+function previewProject(){let p=active();if(!p)return;let html=`<div class="heading no-print"><div><div class="eyebrow">PRINT PREVIEW</div><h1>${esc(p.name)}</h1><p>${esc(p.paper)} · ${esc(p.orientation)} · ${p.pages.length} halaman</p></div><div class="actions"><button class="btn" onclick="go('editor')">← Editor</button><button class="btn primary" onclick="window.print()">Cetak / Simpan PDF</button></div></div>`+p.pages.map((x,i)=>`<section class="preview-sheet"><div class="eyebrow">${esc(p.category)}</div><h2>${esc(x.title)}</h2><p><b>${esc(x.objective)}</b></p>${x.image?`<img class="ill" src="${x.image}">`:''}<p style="white-space:pre-wrap">${esc(x.instructions)}</p><p style="white-space:pre-wrap">${esc(x.body)}</p><div class="footer"><span>${esc(brand.brandName)} · ${esc(brand.tagline)}</span><span>${i+1} / ${p.pages.length}</span></div></section>`).join('');main.innerHTML=html;view='preview'}
+function downloadProject(){let p=active();download(`${slug(p.name)}.json`,JSON.stringify(p,null,2),'application/json')}function slug(s){return (s||'papertopia').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}function download(n,c,t){let a=document.createElement('a'),u=URL.createObjectURL(new Blob([c],{type:t}));a.href=u;a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+function projectList(){main.innerHTML=title('YOUR WORKSPACE','Proyek Saya','Semua proyek tersimpan di browser/perangkat ini.',`<button class="btn primary" onclick="go('create')">＋ Buat Produk</button>`)+(projects.length?`<div class="project-list">${projects.map(projectRow).join('')}</div>`:`<div class="panel empty"><b>Belum ada proyek</b>Mulai dengan membuat produk pertamamu.</div>`)}
+function brandForm(){main.innerHTML=title('IDENTITAS PENERBIT','Brand Studio','Atur identitas yang muncul pada preview dan dokumen cetak.')+`<div class="panel"><div class="brand-box"><img src="assets/papertopia-eagle-stickman.png"><div><b>PAPERTOPIA</b><div class="muted">Maskot resmi workspace</div></div></div><div class="form-grid section"><div class="field"><label>Nama brand</label><input id="brandName" value="${esc(brand.brandName)}"></div><div class="field"><label>Tagline</label><input id="tagline" value="${esc(brand.tagline)}"></div><div class="field"><label>Nama pembuat</label><input id="creator" value="${esc(brand.creator)}"></div><div class="field"><label>Copyright notice</label><input id="copyright" value="${esc(brand.copyright)}"></div></div><div class="actions"><button class="btn primary" onclick="saveBrand()">Simpan identitas</button></div></div>`}function saveBrand(){brand={brandName:$('#brandName').value,tagline:$('#tagline').value,creator:$('#creator').value,copyright:$('#copyright').value};save();alert('Identitas brand tersimpan di perangkat ini.');}
+function help(){main.innerHTML=title('QUICK GUIDE','Panduan penggunaan','Cara menggunakan PAPERTOPIA di HP maupun desktop.')+`<div class="panel"><h3>Alur membuat printable</h3><ol><li>Buat Produk dan isi kategori, topik, usia, serta jumlah halaman.</li><li>Buka editor untuk mengubah judul, instruksi, isi, dan arahan visual setiap halaman.</li><li>Upload ilustrasi milik sendiri jika diperlukan.</li><li>Pilih Preview & Cetak PDF untuk memeriksa halaman.</li><li>Pada dialog cetak browser, pilih Simpan sebagai PDF.</li><li>Gunakan Backup secara berkala agar proyek tidak hilang.</li></ol><div class="notice"><b>Batasan versi ini:</b> mesin konten memakai template offline, bukan AI. Belum ada akun, cloud sync, akses privat server, generator gambar otomatis, atau ekspor PNG massal. Data hanya tersimpan pada browser/perangkat ini.</div><h3>Backup & Restore</h3><p>Backup mengunduh seluruh proyek dan profil brand sebagai JSON. Simpan file tersebut di tempat aman.</p></div>`}
+function projectRow(p){return `<div class="project"><div><h3>${esc(p.name)}</h3><p>${esc(p.category)} · ${esc(p.topic)} · ${p.pages.length} halaman</p></div><div class="actions"><button class="btn" onclick="openProject('${p.id}')">Buka</button><button class="btn danger" onclick="removeProject('${p.id}')">Hapus</button></div></div>`}
+function backup(){download('papertopia-backup.json',JSON.stringify({app:'PAPERTOPIA-LITE',version:'1.0',brand,projects},null,2),'application/json')}function restore(file){if(!file)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!Array.isArray(d.projects)||!d.brand)throw Error('Format backup tidak sesuai.');if(!confirm(`Pulihkan ${d.projects.length} proyek? Proyek lokal akan digabung berdasarkan ID.`))return;projects=[...d.projects,...projects.filter(p=>!d.projects.some(x=>x.id===p.id))];brand=d.brand;save();alert('Backup berhasil dipulihkan.');go('projects')}catch(e){alert(e.message)}};r.readAsText(file)}
+$('#nav').addEventListener('click',e=>{let b=e.target.closest('[data-view]');if(b)go(b.dataset.view)});$('#newBtn').onclick=()=>go('create');$('#backupBtn').onclick=backup;$('#restoreFile').onchange=e=>restore(e.target.files[0]);document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save();}});window.addEventListener('beforeunload',save);window.go=go;window.createProject=createProject;window.openProject=openProject;window.removeProject=removeProject;window.selectPage=selectPage;window.editPage=editPage;window.movePage=movePage;window.addPage=addPage;window.deletePage=deletePage;window.toggleCustomFields=toggleCustomFields;window.loadCustomReference=loadCustomReference;window.uploadPageImage=uploadPageImage;window.chooseBuiltInIllustration=chooseBuiltInIllustration;window.generatePageImage=generatePageImage;window.copyImagePrompt=copyImagePrompt;window.openImageGenerator=openImageGenerator;window.previewProject=previewProject;window.downloadProject=downloadProject;window.saveBrand=saveBrand;window.backup=backup;render();
